@@ -56,10 +56,8 @@ const updateUser = async (
 
     return res.status(constants.HTTP_STATUS_OK).send(user);
   } catch (error) {
-    if (error instanceof MongooseError.CastError) {
-      return next(new NotFoundError(USERS_NOT_FOUND));
-    }
-    if (error instanceof MongooseError.ValidationError) {
+    if (error instanceof MongooseError.CastError
+      || error instanceof MongooseError.ValidationError) {
       return next(new BadRequestError(USERS_UPDATE_BAD_REQUEST));
     }
     return next(error);

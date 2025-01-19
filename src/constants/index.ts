@@ -9,4 +9,5 @@ export {
   USERS_UPDATE_AVATAR_BAD_REQUEST,
   USERS_NOT_FOUND,
   SERVER_ERROR,
+  NON_EXISTENT_ADDRESS,
 } from './error-messages';

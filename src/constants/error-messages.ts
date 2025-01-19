@@ -8,6 +8,7 @@ const USERS_UPDATE_BAD_REQUEST = "Переданы некорректные да
 const USERS_UPDATE_AVATAR_BAD_REQUEST = "Переданы некорректные данные при обновлении аватара.";
 const USERS_NOT_FOUND = "Пользователь с указанным _id не найден.";
 const SERVER_ERROR = "На сервере произошла ошибка.";
+const NON_EXISTENT_ADDRESS = "Запрашиваемый ресурс не найден.";
 
 export {
   CARDS_BAD_REQUEST,
@@ -20,4 +21,5 @@ export {
   USERS_UPDATE_AVATAR_BAD_REQUEST,
   USERS_NOT_FOUND,
   SERVER_ERROR,
+  NON_EXISTENT_ADDRESS,
 };

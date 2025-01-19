@@ -1,5 +1,7 @@
 import express, { json, NextFunction, Request, Response } from 'express';
 import mongoose from 'mongoose';
+import { NON_EXISTENT_ADDRESS } from './constants';
+import NotFoundError from './errors/not-found-error';
 import usersRouter from './routes/users';
 import cardsRouter from './routes/cards';
 import errorHandler from './middleware/error-handler';
@@ -25,6 +27,7 @@ app.use((
 
 app.use('/users', usersRouter);
 app.use('/cards', cardsRouter);
+app.use('*', (_req: Request, _res: Response, next: NextFunction) => next(new NotFoundError(NON_EXISTENT_ADDRESS)));
 
 app.use(errorHandler);
 

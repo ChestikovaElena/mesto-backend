@@ -4,7 +4,8 @@ import { constants } from 'http2';
 import BadRequestError from '../errors/bad-request-error';
 import NotFoundError from '../errors/not-found-error';
 import Card from '../models/card';
-import { CARDS_BAD_REQUEST, CARDS_NOT_FOUND_CARD, LIKE_CARD_BAD_REQUEST, DISLIKE_CARD_BAD_REQUEST, CARD_NOT_FOUND_ON_DELETE } from '../constants';
+import { CARDS_NOT_FOUND_CARD, LIKE_CARD_BAD_REQUEST, DISLIKE_CARD_BAD_REQUEST, CARD_NOT_FOUND_ON_DELETE } from '../constants';
+import { getValidationErrorMessage } from '../utils';
 
 export const getCards = async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -23,7 +24,8 @@ export const createCard = async (req: Request, res: Response, next: NextFunction
     return res.status(constants.HTTP_STATUS_CREATED).send(await newCard.save());
   } catch (error) {
     if (error instanceof MongooseError.ValidationError) {
-      return next(new BadRequestError(CARDS_BAD_REQUEST));
+      const message = getValidationErrorMessage(error);
+      return next(new BadRequestError(message));
     }
     return next(error);
   }

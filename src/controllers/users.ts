@@ -5,7 +5,8 @@ import BadRequestError from '../errors/bad-request-error';
 import NotFoundError from '../errors/not-found-error';
 import User from '../models/user';
 import type { IUser } from "../types/user";
-import { USERS_CREATE_BAD_REQUEST, USERS_UPDATE_BAD_REQUEST, USERS_UPDATE_AVATAR_BAD_REQUEST, USERS_NOT_FOUND } from '../constants';
+import { USERS_UPDATE_BAD_REQUEST, USERS_UPDATE_AVATAR_BAD_REQUEST, USERS_NOT_FOUND } from '../constants';
+import { getValidationErrorMessage } from '../utils';
 
 export const getUsers = async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -35,7 +36,8 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
     return res.status(constants.HTTP_STATUS_CREATED).send(await newUser.save());
   } catch (error) {
     if (error instanceof MongooseError.ValidationError) {
-      return next(new BadRequestError(USERS_CREATE_BAD_REQUEST));
+      const message = getValidationErrorMessage(error);
+      return next(new BadRequestError(message));
     }
     return next(error);
   }
@@ -56,9 +58,12 @@ const updateUser = async (
 
     return res.status(constants.HTTP_STATUS_OK).send(user);
   } catch (error) {
-    if (error instanceof MongooseError.CastError
-      || error instanceof MongooseError.ValidationError) {
+    if (error instanceof MongooseError.CastError) {
       return next(new BadRequestError(USERS_UPDATE_BAD_REQUEST));
+    }
+    if (error instanceof MongooseError.ValidationError) {
+      const message = getValidationErrorMessage(error);
+      return next(new BadRequestError(message));
     }
     return next(error);
   }

@@ -1,12 +1,15 @@
 import express, { json, NextFunction, Request, Response } from 'express';
 import mongoose from 'mongoose';
 import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 import { NON_EXISTENT_ADDRESS } from './constants';
+import { login, createUser } from './controllers/users';
 import NotFoundError from './errors/not-found-error';
 import usersRouter from './routes/users';
 import cardsRouter from './routes/cards';
+import { auth } from './middleware/auth';
 import errorHandler from './middleware/error-handler';
-import { AuthContext } from './types/auth-context';
+import { requestLogger, errorLogger } from './middleware/logger';
 
 const { PORT = 3000, MONGO_URL = 'mongodb://127.0.0.1:27017/mestodb' } = process.env;
 const app = express();
@@ -14,6 +17,7 @@ const app = express();
 mongoose.connect(MONGO_URL);
 
 app.use(json());
+app.use(cookieParser());
 
 const limiter = rateLimit({
   windowMs: 5 * 60 * 1000,
@@ -23,20 +27,18 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-app.use((
-  _req: Request,
-  res: Response<unknown, AuthContext>,
-  next: NextFunction,
-) => {
-  res.locals.user = {
-    _id: '67895f0c2c2bf210fc9dfaa7',
-  };
-  next();
-});
+app.use(requestLogger);
+
+app.post('/signup', createUser);
+app.post('/signin', login);
+
+app.use(auth);
 
 app.use('/users', usersRouter);
 app.use('/cards', cardsRouter);
 app.use('*', (_req: Request, _res: Response, next: NextFunction) => next(new NotFoundError(NON_EXISTENT_ADDRESS)));
+
+app.use(errorLogger);
 
 app.use(errorHandler);
 

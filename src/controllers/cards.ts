@@ -3,9 +3,12 @@ import { Error as MongooseError } from 'mongoose';
 import { constants } from 'http2';
 import BadRequestError from '../errors/bad-request-error';
 import NotFoundError from '../errors/not-found-error';
+import ForbiddenError from '../errors/forbidden-error';
+import UnauthorizedError from '../errors/unauthorized-error';
 import Card from '../models/card';
-import { CARDS_NOT_FOUND_CARD, LIKE_CARD_BAD_REQUEST, DISLIKE_CARD_BAD_REQUEST, CARD_NOT_FOUND_ON_DELETE } from '../constants';
+import { CARDS_NOT_FOUND_CARD, LIKE_CARD_BAD_REQUEST, DISLIKE_CARD_BAD_REQUEST, CARD_NOT_FOUND_ON_DELETE, USER_CANNOT_DELETE_CARD, UNAUTHORIZED_ERROR } from '../constants';
 import { getValidationErrorMessage } from '../utils';
+import { SessionRequest } from '../types';
 
 export const getCards = async (_req: Request, res: Response, next: NextFunction) => {
   try {
@@ -16,9 +19,12 @@ export const getCards = async (_req: Request, res: Response, next: NextFunction)
   }
 };
 
-export const createCard = async (req: Request, res: Response, next: NextFunction) => {
+export const createCard = async (req: SessionRequest, res: Response, next: NextFunction) => {
+  if (!req.user || typeof req.user === 'string') {
+    return next(new UnauthorizedError(UNAUTHORIZED_ERROR));
+  }
   try {
-    const owner = res.locals.user._id;
+    const owner = req.user._id;
     const { name, link } = req.body;
     const newCard = await Card.create({ name, link, owner });
     return res.status(constants.HTTP_STATUS_CREATED).send(await newCard.save());
@@ -31,9 +37,20 @@ export const createCard = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-export const deleteCard = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteCard = async (req: SessionRequest, res: Response, next: NextFunction) => {
+  if (!req.user || typeof req.user === 'string') {
+    return next(new UnauthorizedError(UNAUTHORIZED_ERROR));
+  }
+  const userId = req.user._id;
   try {
     const { cardId } = req.params;
+    const card = await Card.findById(cardId)
+      .orFail(() => new NotFoundError(CARDS_NOT_FOUND_CARD));
+
+    if (card.owner.toString() !== userId) {
+      return next(new ForbiddenError(USER_CANNOT_DELETE_CARD));
+    }
+
     await Card.findByIdAndDelete(cardId)
       .orFail(new NotFoundError(CARD_NOT_FOUND_ON_DELETE));
 
@@ -43,8 +60,11 @@ export const deleteCard = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-const changeCardLikes = async (req: Request, res: Response, next: NextFunction, reaction: "like" | "dislike") => {
-  const userId = res.locals.user._id;
+const changeCardLikes = async (req: SessionRequest, res: Response, next: NextFunction, reaction: "like" | "dislike") => {
+  if (!req.user || typeof req.user === 'string') {
+    return next(new UnauthorizedError(UNAUTHORIZED_ERROR));
+  }
+  const userId = req.user._id;
   try {
     const { cardId } = req.params;
     const updateOption = reaction === "like" ? { $addToSet: { likes: userId } } : { $pull: { likes: userId } };

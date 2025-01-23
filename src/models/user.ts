@@ -1,24 +1,65 @@
-import { model, Schema } from 'mongoose';
-import { IUser } from '../types/user';
+import { model, Model, Schema, Document } from 'mongoose';
+import validator from 'validator';
+import bcrypt from 'bcryptjs';
+import { DEFAULT_USER, urlRegex } from '../constants';
+import type { IUser } from '../types';
 
-const userSchema = new Schema<IUser>({
+interface UserModel extends Model<IUser> {
+  findUserByCredentials: (email: string, password: string) => Promise<Document<unknown, any, IUser>>
+}
+
+const userSchema = new Schema<IUser, UserModel>({
   name: {
     type: String,
     minlength: [2, 'Минимальная длина поля "name" - 2.'],
     maxlength: [30, 'Максимальная длина поля "name" - 30.'],
-    required: [true, 'Поле "name" должно быть заполнено.'],
-    unique: true,
+    default: DEFAULT_USER.name,
   },
   about: {
     type: String,
     minlength: [2, 'Минимальная длина поля "name" - 2.'],
     maxlength: [200, 'Максимальная длина поля "name" - 200.'],
-    required: [true, 'Поле "about" должно быть заполнено.'],
+    default: DEFAULT_USER.about,
   },
   avatar: {
     type: String,
-    required: [true, 'Поле "avatar" должно быть заполнено.'],
+    default: DEFAULT_USER.avatar,
+    validate: {
+      validator: (v: string) => urlRegex.test(v),
+      message: 'Неправильный формат ссылки.',
+
+    },
+  },
+  email: {
+    type: String,
+    unique: true,
+    required: [true, 'Поле "email" должно быть заполнено.'],
+    validate: {
+      validator: (v: string) => validator.isEmail(v),
+      message: 'Неправильный формат почты.',
+    },
+  },
+  password: {
+    type: String,
+    required: [true, 'Поле "password" должно быть заполнено.'],
+    select: false,
   },
 }, { versionKey: false });
 
-export default model<IUser>('user', userSchema);
+userSchema.static('findUserByCredentials', function findUserByCredentials(email: string, password: string) {
+  return this.findOne({ email }).select('+password').then((user) => {
+    if (!user) {
+      return Promise.reject(new Error('Неправильные почта или пароль.'));
+    }
+
+    return bcrypt.compare(password, user.password).then((matched) => {
+      if (!matched) {
+        return Promise.reject(new Error('Неправильные почта или пароль'));
+      }
+
+      return user;
+    });
+  });
+});
+
+export default model<IUser, UserModel>('user', userSchema);

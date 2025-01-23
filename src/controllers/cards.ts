@@ -4,9 +4,8 @@ import { constants } from 'http2';
 import BadRequestError from '../errors/bad-request-error';
 import NotFoundError from '../errors/not-found-error';
 import ForbiddenError from '../errors/forbidden-error';
-import UnauthorizedError from '../errors/unauthorized-error';
 import Card from '../models/card';
-import { CARDS_NOT_FOUND_CARD, LIKE_CARD_BAD_REQUEST, DISLIKE_CARD_BAD_REQUEST, CARD_NOT_FOUND_ON_DELETE, USER_CANNOT_DELETE_CARD, UNAUTHORIZED_ERROR } from '../constants';
+import { CARDS_NOT_FOUND_CARD, CARD_NOT_FOUND_ON_DELETE, USER_CANNOT_DELETE_CARD, INVALID_DATA_ERROR } from '../constants';
 import { getValidationErrorMessage } from '../utils';
 import { SessionRequest } from '../types';
 
@@ -19,12 +18,9 @@ export const getCards = async (_req: Request, res: Response, next: NextFunction)
   }
 };
 
-export const createCard = async (req: SessionRequest, res: Response, next: NextFunction) => {
-  if (!req.user || typeof req.user === 'string') {
-    return next(new UnauthorizedError(UNAUTHORIZED_ERROR));
-  }
+export const createCard = async (req: Request, res: Response, next: NextFunction) => {
+  const owner = (req as SessionRequest).user._id;
   try {
-    const owner = req.user._id;
     const { name, link } = req.body;
     const newCard = await Card.create({ name, link, owner });
     return res.status(constants.HTTP_STATUS_CREATED).send(await newCard.save());
@@ -37,11 +33,8 @@ export const createCard = async (req: SessionRequest, res: Response, next: NextF
   }
 };
 
-export const deleteCard = async (req: SessionRequest, res: Response, next: NextFunction) => {
-  if (!req.user || typeof req.user === 'string') {
-    return next(new UnauthorizedError(UNAUTHORIZED_ERROR));
-  }
-  const userId = req.user._id;
+export const deleteCard = async (req: Request, res: Response, next: NextFunction) => {
+  const userId = (req as SessionRequest).user._id;
   try {
     const { cardId } = req.params;
     const card = await Card.findById(cardId)
@@ -56,15 +49,15 @@ export const deleteCard = async (req: SessionRequest, res: Response, next: NextF
 
     return res.status(constants.HTTP_STATUS_NO_CONTENT);
   } catch (error) {
+    if (error instanceof MongooseError.CastError) {
+      return next(new BadRequestError(CARDS_NOT_FOUND_CARD));
+    }
     return next(error);
   }
 };
 
-const changeCardLikes = async (req: SessionRequest, res: Response, next: NextFunction, reaction: "like" | "dislike") => {
-  if (!req.user || typeof req.user === 'string') {
-    return next(new UnauthorizedError(UNAUTHORIZED_ERROR));
-  }
-  const userId = req.user._id;
+const changeCardLikes = async (req: Request, res: Response, next: NextFunction, reaction: "like" | "dislike") => {
+  const userId = (req as SessionRequest).user._id;
   try {
     const { cardId } = req.params;
     const updateOption = reaction === "like" ? { $addToSet: { likes: userId } } : { $pull: { likes: userId } };
@@ -77,14 +70,10 @@ const changeCardLikes = async (req: SessionRequest, res: Response, next: NextFun
     return res.status(constants.HTTP_STATUS_OK).send(card);
   } catch (error) {
     if (!(error instanceof MongooseError.CastError)) {
-      return next(error);
+      return next(new BadRequestError(INVALID_DATA_ERROR));
     }
 
-    if (error.value === userId) {
-      return next(new BadRequestError(reaction === "like" ? LIKE_CARD_BAD_REQUEST : DISLIKE_CARD_BAD_REQUEST));
-    } else {
-      return next(new BadRequestError(CARDS_NOT_FOUND_CARD));
-    }
+    return next(error);
   }
 };
 

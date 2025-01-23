@@ -3,11 +3,10 @@ import { Error as MongooseError } from 'mongoose';
 import { constants } from 'http2';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { CREATE_USER_CONFLICT_ERROR, TOKEN_KEY, USERS_UPDATE_BAD_REQUEST, USERS_UPDATE_AVATAR_BAD_REQUEST, USERS_NOT_FOUND, UNAUTHORIZED_ERROR } from '../constants';
+import { CREATE_USER_CONFLICT_ERROR, TOKEN_KEY, USERS_UPDATE_BAD_REQUEST, USERS_UPDATE_AVATAR_BAD_REQUEST, USERS_NOT_FOUND } from '../constants';
 import BadRequestError from '../errors/bad-request-error';
 import NotFoundError from '../errors/not-found-error';
 import ConflictError from '../errors/conflict-error';
-import UnauthorizedError from '../errors/unauthorized-error';
 import User from '../models/user';
 import type { IUser, SessionRequest } from "../types";
 import { getValidationErrorMessage } from '../utils';
@@ -34,11 +33,8 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-export const getUserInfo = async (req: SessionRequest, res: Response, next: NextFunction) => {
-  if (!req.user || typeof req.user === 'string') {
-    return next(new UnauthorizedError(UNAUTHORIZED_ERROR));
-  }
-  const id = req.user._id;
+export const getUserInfo = async (req: Request, res: Response, next: NextFunction) => {
+  const id = (req as SessionRequest).user._id;
   try {
     const user = await User.findById(id).orFail(() => new NotFoundError(USERS_NOT_FOUND));
     return res.send(user);
@@ -67,16 +63,13 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 };
 
 const updateUser = async (
-  req: SessionRequest,
+  req: Request,
   res: Response,
   next: NextFunction,
   data: Partial<IUser>,
 ) => {
   try {
-    if (!req.user || typeof req.user === 'string') {
-      return next(new UnauthorizedError(UNAUTHORIZED_ERROR));
-    }
-    const id = req.user._id;
+    const id = (req as SessionRequest).user._id;
     const user = await User.findByIdAndUpdate(
       id,
       data,
@@ -96,7 +89,7 @@ const updateUser = async (
   }
 };
 
-export const updateUserInfo = (req: SessionRequest, res: Response, next: NextFunction) => {
+export const updateUserInfo = (req: Request, res: Response, next: NextFunction) => {
   const { name, about } = req.body;
   if (!name && !about) {
     return next(new BadRequestError(USERS_UPDATE_BAD_REQUEST));
@@ -104,7 +97,7 @@ export const updateUserInfo = (req: SessionRequest, res: Response, next: NextFun
   return updateUser(req, res, next, { name, about });
 };
 
-export const updateUserAvatar = (req: SessionRequest, res: Response, next: NextFunction) => {
+export const updateUserAvatar = (req: Request, res: Response, next: NextFunction) => {
   const { avatar } = req.body;
   if (!avatar) {
     return next(new BadRequestError(USERS_UPDATE_AVATAR_BAD_REQUEST));

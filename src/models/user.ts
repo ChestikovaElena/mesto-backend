@@ -1,8 +1,9 @@
 import { model, Model, Schema, Document } from 'mongoose';
 import validator from 'validator';
 import bcrypt from 'bcryptjs';
-import { DEFAULT_USER, urlRegex } from '../constants';
+import { DEFAULT_USER, INCORRECT_EMAIL_OR_PASSWORD_ERROR, urlRegex } from '../constants';
 import type { IUser } from '../types';
+import UnauthorizedError from '../errors/unauthorized-error';
 
 interface UserModel extends Model<IUser> {
   findUserByCredentials: (email: string, password: string) => Promise<Document<unknown, any, IUser>>
@@ -49,12 +50,12 @@ const userSchema = new Schema<IUser, UserModel>({
 userSchema.static('findUserByCredentials', function findUserByCredentials(email: string, password: string) {
   return this.findOne({ email }).select('+password').then((user) => {
     if (!user) {
-      return Promise.reject(new Error('Неправильные почта или пароль.'));
+      return (new UnauthorizedError(INCORRECT_EMAIL_OR_PASSWORD_ERROR));
     }
 
     return bcrypt.compare(password, user.password).then((matched) => {
       if (!matched) {
-        return Promise.reject(new Error('Неправильные почта или пароль'));
+        return (new UnauthorizedError(INCORRECT_EMAIL_OR_PASSWORD_ERROR));
       }
 
       return user;

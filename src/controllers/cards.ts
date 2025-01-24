@@ -5,7 +5,7 @@ import BadRequestError from '../errors/bad-request-error';
 import NotFoundError from '../errors/not-found-error';
 import ForbiddenError from '../errors/forbidden-error';
 import Card from '../models/card';
-import { CARDS_NOT_FOUND_CARD, CARD_NOT_FOUND_ON_DELETE, USER_CANNOT_DELETE_CARD, INVALID_DATA_ERROR } from '../constants';
+import { CARDS_NOT_FOUND_CARD, USER_CANNOT_DELETE_CARD, INVALID_DATA_ERROR } from '../constants';
 import { getValidationErrorMessage } from '../utils';
 import { SessionRequest } from '../types';
 
@@ -44,8 +44,7 @@ export const deleteCard = async (req: Request, res: Response, next: NextFunction
       return next(new ForbiddenError(USER_CANNOT_DELETE_CARD));
     }
 
-    await Card.findByIdAndDelete(cardId)
-      .orFail(new NotFoundError(CARD_NOT_FOUND_ON_DELETE));
+    await Card.findByIdAndDelete(cardId);
 
     return res.status(constants.HTTP_STATUS_NO_CONTENT);
   } catch (error) {

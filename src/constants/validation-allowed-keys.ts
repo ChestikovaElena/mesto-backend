@@ -5,5 +5,5 @@ export const authorizationAllowedKey = {
 };
 
 export const cardIDAllowedKey = {
-  cardId: Joi.string().required().alphanum().length(24),
+  cardId: Joi.string().required().hex().length(24),
 };

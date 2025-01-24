@@ -43,6 +43,8 @@ const userSchema = new Schema<IUser, UserModel>({
   password: {
     type: String,
     required: [true, 'Поле "password" должно быть заполнено.'],
+    minlength: [8, 'Минимальная длина поля "password" - 8.'],
+    maxlength: [20, 'Минимальная длина поля "password" - 20.'],
     select: false,
   },
 }, { versionKey: false });

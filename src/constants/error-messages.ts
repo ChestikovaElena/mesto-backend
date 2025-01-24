@@ -14,3 +14,4 @@ export const SERVER_ERROR = "На сервере произошла ошибка
 export const NON_EXISTENT_ADDRESS = "Запрашиваемый ресурс не найден.";
 export const UNAUTHORIZED_ERROR = "Необходима авторизация.";
 export const INCORRECT_EMAIL_OR_PASSWORD_ERROR = "Неправильные почта или пароль.";
+export const DATA_VALIDATION_ERROR = "Ошибка валидации данных.";

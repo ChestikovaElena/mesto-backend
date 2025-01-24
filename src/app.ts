@@ -2,6 +2,7 @@ import express, { json, NextFunction, Request, Response } from 'express';
 import mongoose from 'mongoose';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
+import { celebrate, errors, Joi } from 'celebrate';
 import { NON_EXISTENT_ADDRESS } from './constants';
 import { login, createUser } from './controllers/users';
 import NotFoundError from './errors/not-found-error';
@@ -29,8 +30,22 @@ app.use(limiter);
 
 app.use(requestLogger);
 
-app.post('/signup', createUser);
-app.post('/signin', login);
+app.post('/signup', celebrate({
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    password: Joi.string().required().min(8).max(20),
+    name: Joi.string().min(2).max(30),
+    about: Joi.string().min(2).max(200),
+    avatar: Joi.string().uri(),
+  }),
+}), createUser);
+
+app.post('/signin', celebrate({
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    password: Joi.string().required().min(8).max(20),
+  }),
+}), login);
 
 app.use(auth);
 
@@ -39,6 +54,8 @@ app.use('/cards', cardsRouter);
 app.use('*', (_req: Request, _res: Response, next: NextFunction) => next(new NotFoundError(NON_EXISTENT_ADDRESS)));
 
 app.use(errorLogger);
+
+app.use(errors());
 
 app.use(errorHandler);
 
